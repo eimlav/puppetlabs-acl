@@ -53,24 +53,18 @@ describe 'Negative - Specify Symlink as Target' do
     MANIFEST
   end
 
-  windows_agents.each do |agent|
-    context "on #{agent}" do
-      it 'applies manifest' do
-        execute_manifest_on(agent, acl_manifest, debug: true) do |result|
-          assert_no_match(%r{Error:}, result.stderr, 'Unexpected error was detected!')
-        end
-      end
+  it 'applies manifest' do
+    idempotent_apply(acl_manifest)
+  end
 
-      it 'verifies ACL rights' do
-        on(agent, verify_acl_command) do |result|
-          assert_no_match(acl_regex, result.stdout, 'Expected ACL was not present!')
-        end
-      end
-
-      it 'verifies file data integrity' do
-        expect(file(verify_content_path)).to be_file
-        expect(file(verify_content_path).content).to match(%r{#{file_content}})
-      end
+  it 'verifies ACL rights' do
+    run_shell(verify_acl_command) do |result|
+      expect(result.stdout).not_to match(acl_regex)
     end
+  end
+
+  it 'verifies file data integrity' do
+    expect(file(verify_content_path)).to be_file
+    expect(file(verify_content_path).content).to match(%r{#{file_content}})
   end
 end

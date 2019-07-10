@@ -57,26 +57,18 @@ describe 'Purge' do
     let(:verify_acl_command) { "icacls #{target}" }
     let(:acl_regex_user_id1) { %r{.*\\bob:\(F\)} }
 
-    windows_agents.each do |agent|
-      context "on #{agent}" do
-        it 'applies manifest' do
-          execute_manifest_on(agent, acl_manifest, debug: true) do |result|
-            expect(result.stderr).not_to match(%r{Error:})
-          end
-        end
+    it 'applies manifest' do
+      idempotent_apply(acl_manifest)
+    end
 
-        it 'verifies ACL rights' do
-          on(agent, verify_acl_command) do |result|
-            expect(result.stdout).to match(%r{#{acl_regex_user_id1}})
-          end
-        end
-
-        it 'executes purge' do
-          execute_manifest_on(agent, acl_manifest_purge, debug: true) do |result|
-            expect(result.stderr).not_to match(%r{Error:})
-          end
-        end
+    it 'verifies ACL rights' do
+      run_shell(verify_acl_command) do |result|
+        expect(result.stdout).to match(%r{#{acl_regex_user_id1}})
       end
+    end
+
+    it 'executes purge' do
+      idempotent_apply(acl_manifest_purge)
     end
   end
 end

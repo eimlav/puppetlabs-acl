@@ -55,33 +55,27 @@ describe 'Use Cases' do
     let(:target_child_first_ace_regex) { %r{.*\\Administrators:\(I\)\(F\)} }
     let(:target_child_second_ace_regex) { %r{.*\\Administrator:\(N\)} }
 
-    windows_agents.each do |agent|
-      context "on #{agent}" do
-        it 'applies manifest' do
-          execute_manifest_on(agent, acl_manifest, debug: true) do |result|
-            expect(result.stderr).not_to match(%r{Error:})
-          end
-        end
+    it 'applies manifest' do
+      idempotent_apply(acl_manifest)
+    end
 
-        it 'verifies ACL child rights' do
-          on(agent, verify_acl_child_command) do |result|
-            expect(result.stdout).to match(%r{#{target_child_first_ace_regex}})
-            expect(result.stdout).to match(%r{#{target_child_second_ace_regex}})
-          end
-        end
+    it 'verifies ACL child rights' do
+      run_shell(verify_acl_child_command) do |result|
+        expect(result.stdout).to match(%r{#{target_child_first_ace_regex}})
+        expect(result.stdout).to match(%r{#{target_child_second_ace_regex}})
+      end
+    end
 
-        it 'attempts to update file, raises error' do
-          execute_manifest_on(agent, update_manifest, debug: true) do |result|
-            expect(result.stderr).not_to match(%r{Error:})
-          end
-        end
+    it 'attempts to update file, raises error' do
+      apply_manifest(update_manifest, expect_failures: true) do |result|
+        expect(result.stderr).to match(%r{Error:})
+      end
+    end
 
-        it 'verifies file data integrity' do
-          # Serverspec is unable to access the file
-          on(agent, verify_content_command) do |result|
-            assert_match(file_content_regex(file_content), result.stdout, 'File content is invalid!')
-          end
-        end
+    it 'verifies file data integrity' do
+      # Serverspec is unable to access the file
+      run_shell(verify_content_command) do |result|
+        expect(result.stdout).to match(file_content_regex(file_content))
       end
     end
   end
